@@ -1,33 +1,28 @@
 package org.flamie.moon;
 
-import static org.flamie.moon.util.Dimen.dp;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.view.MotionEvent;
 import android.view.View;
 
 public class MoonView extends View {
 
+    private LinearGradient skyGradient;
     private float xSun;
     private float ySun;
     private float sunSpeed = 200f;
-    private float targetPosition = 900f;
-    private float originalPosition = 2f;
+    private float targetPosition = 1200f;
+    private float originalPosition = 4f;
     private float distance = targetPosition - originalPosition;
 
-//    private int canvasWidth = this.getWidth() / 2;
-//    private int canvasHeight = this.getHeight() / 2;
+    private int canvasWidth;
+    private int canvasHeight;
     private float radius = 50f;
-    private float xMoon = 500f;
-    private float yMoon = 500f;
-    private float x;
-    private float y;
-    private float rectWidth;
-    private float rectHeight;
 
     private Paint sunPaint;
     private Paint moonPaint;
@@ -38,10 +33,15 @@ public class MoonView extends View {
     private RectF nearSideOfTheMoon;
     private RectF cloudRect;
     private RectF cloud;
+    private RectF sky;
 
-    private int skyRed = 26;
-    private int skyGreen = 35;
-    private int skyBlue = 126;
+    private int skyRedTop = 90;
+    private int skyGreenTop = 100;
+    private int skyBlueTop = 190;
+
+    private int skyRedBottom = 40;
+    private int skyGreenBottom = 50;
+    private int skyBlueBottom = 140;
 
     public MoonView(Context context) {
         super(context);
@@ -56,30 +56,41 @@ public class MoonView extends View {
         moonPaint.setStyle(Paint.Style.STROKE);
         moonPaint.setAntiAlias(true);
 
+        skyGradient = new LinearGradient(0, 0, 0, canvasHeight,
+                                         Color.rgb(skyRedBottom, skyGreenBottom, skyBlueBottom),
+                                         Color.rgb(skyRedBottom, skyGreenBottom, skyBlueBottom),
+                                         Shader.TileMode.MIRROR);
         skyPaint = new Paint();
-//        skyPaint.setColor(Color.argb(255, 48, 63, 159));
+        skyPaint.setShader(skyGradient);
         skyPaint.setStyle(Paint.Style.FILL);
         skyPaint.setAntiAlias(true);
 
         cloudPaint = new Paint();
         cloudPaint.setColor(Color.argb(255, 48, 63, 159));
-        skyPaint.setStyle(Paint.Style.FILL);
+        cloudPaint.setStyle(Paint.Style.FILL);
         cloudPaint.setAntiAlias(true);
 
         cloud = new RectF();
         cloudRect = new RectF();
         farSideOfTheMoon = new RectF();
         nearSideOfTheMoon = new RectF();
+        sky = new RectF();
 
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        canvas.drawColor(Color.argb(255, skyRed, skyGreen, skyBlue));
-//        skyPaint.setColor(Color.argb(255, skyRed, skyGreen, skyBlue));
+        // TODO: remove this shit
+        skyPaint.setShader(new LinearGradient(0, 0, 0, canvasHeight,
+                           Color.rgb(skyRedTop, skyGreenTop, skyBlueTop),
+                           Color.rgb(skyRedBottom, skyGreenBottom, skyBlueBottom),
+                           Shader.TileMode.MIRROR));
+        canvas.drawPaint(skyPaint);
+
+//        skyPaint.setColor(Color.argb(255, skyRedTop, skyGreenTop, skyBlueTop));
 //        farSideOfTheMoon.set(xMoon - radius, yMoon - radius, xMoon + radius, yMoon + radius);
 //        nearSideOfTheMoon.set((xMoon - 100f) - radius, (yMoon - 100f) - radius, (xMoon - 100f) + radius, (yMoon - 100f) + radius);
-        canvas.drawCircle(xSun, -ySun + 1000f, radius, sunPaint);
+        canvas.drawCircle(xSun - 100f, -ySun + 1000f, radius, sunPaint);
 
 //        canvas.drawRect(dp(1), dp(20), dp(10), dp(40), cloudPaint);
 //        canvas.drawArc(farSideOfTheMoon, 295f, 220f, false, moonPaint);
@@ -91,14 +102,16 @@ public class MoonView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 sunMoving();
-//                redColor();
-                greenColor();
+                colorTop();
+                colorBottom();
+                sunrise();
                 invalidate();
                 break;
             case MotionEvent.ACTION_MOVE:
                 sunMoving();
-//                redColor();
-                greenColor();
+                colorTop();
+                colorBottom();
+                sunrise();
                 invalidate();
                 break;
         }
@@ -106,22 +119,61 @@ public class MoonView extends View {
     }
 
     public void sunMoving() {
-        if(xSun < 1200f) {
+        if(xSun < 2000f) {
             xSun += distance / sunSpeed;
         } else {
             xSun =- distance / sunSpeed;
+            skyRedTop = 90;
+            skyGreenTop = 100;
+            skyBlueTop = 190;
+            skyRedBottom = 40;
+            skyGreenBottom = 50;
+            skyBlueBottom = 140;
         }
         ySun = (float) (500 * Math.sin(Math.PI * (Math.abs(xSun + originalPosition)) / distance));
     }
 
-    public int greenColor() {
-        if(skyGreen <= 80 && ySun > 200) {
-            skyGreen += 1;
-        } else if(skyGreen >= 20) {
-            skyGreen += -1;
+    public void sunrise() {
+        if(ySun > 150 && ySun < 220) {
+            skyRedBottom += 10;
+            skyGreenBottom += 5;
+        } else if(ySun < 150 && skyRedBottom > 40 && skyGreenBottom > 40) {
+            skyRedBottom += -10;
+            skyGreenBottom += -5;
         }
-        return skyGreen;
     }
 
+    public void colorBottom() {
+         if(skyBlueBottom < 240 && ySun > 200 && skyGreenBottom < 180) {
+            // day
+            skyBlueBottom += 10;
+            skyGreenBottom += 10;
+        } else if(skyBlueBottom > 140 && ySun < 150 && skyGreenBottom > 50) {
+            // night
+            skyBlueBottom += -10;
+            skyGreenBottom += -10;
+        }
+    }
+
+    public void colorTop() {
+        if(skyBlueTop <= 240 && ySun > 200 && skyGreenTop <= 200 && skyRedTop <= 110) {
+            // day
+            skyBlueTop += 10;
+            skyGreenTop += 10;
+            skyRedTop += 5;
+        } else if(skyBlueTop >= 190 && ySun <= 150 && skyRedTop >= 90 && skyGreenTop >= 100) {
+            // night
+            skyBlueTop += -10;
+            skyGreenTop += -10;
+            skyRedTop += -5;
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        canvasWidth = getWidth();
+        canvasHeight = getHeight();
+    }
 
 }
